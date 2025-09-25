@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Todo List</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- SortableJS for drag and drop -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    
+    <style>
+      .todo-item {
+        transition: all 0.3s ease;
+        cursor: move;
+      }
+      
+      .todo-item:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      
+      .todo-item.completed {
+        opacity: 0.7;
+      }
+      
+      .todo-item.completed .todo-text {
+        text-decoration: line-through;
+        color: #6c757d;
+      }
+      
+      .sortable-ghost {
+        opacity: 0.4;
+      }
+      
+      .sortable-chosen {
+        background-color: #e3f2fd;
+      }
+      
+      .drag-handle {
+        cursor: grab;
+        color: #6c757d;
+      }
+      
+      .drag-handle:active {
+        cursor: grabbing;
+      }
+      
+      .filter-btn.active {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+      }
+      
+      .edit-mode {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+      }
+      
+      .search-highlight {
+        background-color: yellow;
+        padding: 1px 2px;
+        border-radius: 2px;
+      }
+      
+      .todo-stats {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      
+      .main-container {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+      }
+      
+      .todo-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: none;
+      }
+      
+      .btn-primary {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        border-radius: 25px;
+        padding: 10px 20px;
+        transition: all 0.3s ease;
+      }
+      
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+      
+      .form-control {
+        border-radius: 15px;
+        border: 2px solid #e9ecef;
+        padding: 12px 20px;
+        transition: all 0.3s ease;
+      }
+      
+      .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-container">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-8 col-md-10">
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-tabs mb-4">
+              <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="index.html">Todo List</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="magic-number.html">Magic Number</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="password-checker.html">Password Checker</a>
+              </li>
+            </ul>
+            
+            <div class="card todo-card">
+              <div class="card-body p-4">
+                <!-- Header with Stats -->
+                <div class="todo-stats text-center">
+                  <h1 class="mb-3">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    Enhanced Todo List
+                  </h1>
+                  <div class="row">
+                    <div class="col-4">
+                      <div class="fw-bold fs-4" id="totalCount">0</div>
+                      <div class="small">Total</div>
+                    </div>
+                    <div class="col-4">
+                      <div class="fw-bold fs-4" id="completedCount">0</div>
+                      <div class="small">Completed</div>
+                    </div>
+                    <div class="col-4">
+                      <div class="fw-bold fs-4" id="pendingCount">0</div>
+                      <div class="small">Pending</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Add Todo Form -->
+                <form id="todoForm" class="mb-4">
+                  <div class="mb-3">
+                    <label for="todoInput" class="form-label fw-semibold">
+                      <i class="bi bi-plus-circle me-2"></i>
+                      Apa rencana kamu selanjutnya?
+                    </label>
+                    <div class="input-group">
+                      <input 
+                        type="text" 
+                        class="form-control" 
+                        id="todoInput" 
+                        name="todo" 
+                        placeholder="Masukkan todo item..."
+                        autocomplete="off"
+                      />
+                      <button type="submit" class="btn btn-primary" id="addBtn">
+                        <i class="bi bi-plus-lg me-1"></i>
+                        Tambah
+                      </button>
+                      <button type="button" class="btn btn-secondary d-none" id="cancelBtn">
+                        <i class="bi bi-x-lg me-1"></i>
+                        Batal
+                      </button>
+                    </div>
+                    <div class="invalid-feedback" id="errorMessage"></div>
+                  </div>
+                </form>
+
+                <!-- Search and Filter Controls -->
+                <div class="row mb-4">
+                  <div class="col-md-6">
+                    <div class="input-group">
+                      <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                      </span>
+                      <input 
+                        type="text" 
+                        class="form-control" 
+                        id="searchInput" 
+                        placeholder="Cari todos..."
+                      />
+                    </div>
+                  </div>
+                  <div class="col-md-6 mt-2 mt-md-0">
+                    <div class="btn-group w-100" role="group">
+                      <button type="button" class="btn btn-outline-primary filter-btn active" data-filter="all">
+                        <i class="bi bi-list-ul me-1"></i>
+                        Semua <span class="badge bg-primary ms-1" id="allBadge">0</span>
+                      </button>
+                      <button type="button" class="btn btn-outline-success filter-btn" data-filter="pending">
+                        <i class="bi bi-circle me-1"></i>
+                        Belum <span class="badge bg-success ms-1" id="pendingBadge">0</span>
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary filter-btn" data-filter="completed">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Selesai <span class="badge bg-secondary ms-1" id="completedBadge">0</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Todo List -->
+                <div id="todoContainer">
+                  <ul class="list-group list-group-flush" id="todoList">
+                    <!-- Todos will be dynamically inserted here -->
+                  </ul>
+                  
+                  <!-- Empty State -->
+                  <div class="text-center py-5 d-none" id="emptyState">
+                    <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+                    <h4 class="text-muted">Tidak ada todos</h4>
+                    <p class="text-muted">Tambahkan todo baru untuk memulai!</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-pencil-square me-2"></i>
+              Edit Todo
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <form id="editForm">
+              <div class="mb-3">
+                <label for="editInput" class="form-label">Teks Todo</label>
+                <input type="text" class="form-control" id="editInput" required>
+                <div class="invalid-feedback" id="editErrorMessage"></div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="button" class="btn btn-primary" id="saveEditBtn">
+              <i class="bi bi-check-lg me-1"></i>
+              Simpan Perubahan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      class TodoApp {
+        constructor() {
+          this.todos = this.loadTodos();
+          this.currentFilter = 'all';
+          this.currentSearch = '';
+          this.editingId = null;
+          this.sortable = null;
+          
+          this.initializeElements();
+          this.bindEvents();
+          this.initializeSortable();
+          this.render();
+        }
+
+        initializeElements() {
+          this.todoForm = document.getElementById('todoForm');
+          this.todoInput = document.getElementById('todoInput');
+          this.todoList = document.getElementById('todoList');
+          this.searchInput = document.getElementById('searchInput');
+          this.filterBtns = document.querySelectorAll('.filter-btn');
+          this.emptyState = document.getElementById('emptyState');
+          this.errorMessage = document.getElementById('errorMessage');
+          this.addBtn = document.getElementById('addBtn');
+          this.cancelBtn = document.getElementById('cancelBtn');
+          
+          // Modal elements
+          this.editModal = new bootstrap.Modal(document.getElementById('editModal'));
+          this.editForm = document.getElementById('editForm');
+          this.editInput = document.getElementById('editInput');
+          this.editErrorMessage = document.getElementById('editErrorMessage');
+          this.saveEditBtn = document.getElementById('saveEditBtn');
+        }
+
+        bindEvents() {
+          // Form submission
+          this.todoForm.addEventListener('submit', (e) => this.handleAddTodo(e));
+          
+          // Search functionality
+          this.searchInput.addEventListener('input', (e) => this.handleSearch(e));
+          
+          // Filter buttons
+          this.filterBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleFilter(e));
+          });
+          
+          // Cancel edit
+          this.cancelBtn.addEventListener('click', () => this.cancelEdit());
+          
+          // Edit modal events
+          this.saveEditBtn.addEventListener('click', () => this.saveEdit());
+          this.editForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveEdit();
+          });
+        }
+
+        initializeSortable() {
+          this.sortable = new Sortable(this.todoList, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            handle: '.drag-handle',
+            onEnd: (evt) => {
+              const filteredTodos = this.getFilteredTodos();
+              const movedTodo = filteredTodos[evt.oldIndex];
+              
+              // Remove from old position in filtered array
+              filteredTodos.splice(evt.oldIndex, 1);
+              // Insert at new position in filtered array
+              filteredTodos.splice(evt.newIndex, 0, movedTodo);
+              
+              // Update the main todos array to reflect the new order
+              this.reorderTodos(filteredTodos);
+              this.saveTodos();
+              this.render();
+            }
+          });
+        }
+
+        reorderTodos(orderedFilteredTodos) {
+          // Create a new array with the reordered todos while preserving non-visible todos
+          const visibleIds = orderedFilteredTodos.map(todo => todo.id);
+          const nonVisibleTodos = this.todos.filter(todo => !visibleIds.includes(todo.id));
+          
+          // Combine ordered visible todos with non-visible todos
+          this.todos = [...orderedFilteredTodos, ...nonVisibleTodos];
+        }
+
+        generateId() {
+          return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        loadTodos() {
+          const stored = localStorage.getItem('enhanced-todos');
+          return stored ? JSON.parse(stored) : [];
+        }
+
+        saveTodos() {
+          localStorage.setItem('enhanced-todos', JSON.stringify(this.todos));
+        }
+
+        handleAddTodo(e) {
+          e.preventDefault();
+          const text = this.todoInput.value.trim();
+          
+          if (!text) {
+            this.showError('Todo tidak boleh kosong!');
+            return;
+          }
+          
+          if (this.editingId) {
+            this.updateTodo(this.editingId, text);
+            this.cancelEdit();
+          } else {
+            if (this.isDuplicate(text)) {
+              this.showError('Todo dengan teks ini sudah ada!');
+              return;
+            }
+            this.addTodo(text);
+          }
+          
+          this.todoInput.value = '';
+          this.clearError();
+        }
+
+        addTodo(text) {
+          const newTodo = {
+            id: this.generateId(),
+            text: text,
+            completed: false,
+            createdAt: new Date().toISOString()
+          };
+          
+          this.todos.unshift(newTodo);
+          this.saveTodos();
+          this.render();
+        }
+
+        updateTodo(id, newText) {
+          const todo = this.todos.find(t => t.id === id);
+          if (todo) {
+            todo.text = newText;
+            this.saveTodos();
+            this.render();
+          }
+        }
+
+        deleteTodo(id) {
+          this.todos = this.todos.filter(t => t.id !== id);
+          this.saveTodos();
+          this.render();
+        }
+
+        toggleTodo(id) {
+          const todo = this.todos.find(t => t.id === id);
+          if (todo) {
+            todo.completed = !todo.completed;
+            todo.completedAt = todo.completed ? new Date().toISOString() : null;
+            this.saveTodos();
+            this.render();
+          }
+        }
+
+        isDuplicate(text, excludeId = null) {
+          return this.todos.some(todo => 
+            todo.text.toLowerCase() === text.toLowerCase() && 
+            todo.id !== excludeId
+          );
+        }
+
+        showError(message) {
+          this.todoInput.classList.add('is-invalid');
+          this.errorMessage.textContent = message;
+        }
+
+        clearError() {
+          this.todoInput.classList.remove('is-invalid');
+          this.errorMessage.textContent = '';
+        }
+
+        handleSearch(e) {
+          this.currentSearch = e.target.value.toLowerCase();
+          this.render();
+        }
+
+        handleFilter(e) {
+          const filter = e.target.dataset.filter;
+          if (filter) {
+            this.filterBtns.forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            this.currentFilter = filter;
+            this.render();
+          }
+        }
+
+        getFilteredTodos() {
+          let filtered = [...this.todos];
+          
+          // Apply status filter
+          if (this.currentFilter === 'completed') {
+            filtered = filtered.filter(todo => todo.completed);
+          } else if (this.currentFilter === 'pending') {
+            filtered = filtered.filter(todo => !todo.completed);
+          }
+          
+          // Apply search filter
+          if (this.currentSearch) {
+            filtered = filtered.filter(todo =>
+              todo.text.toLowerCase().includes(this.currentSearch)
+            );
+          }
+          
+          return filtered;
+        }
+
+        highlightSearchText(text) {
+          if (!this.currentSearch) return text;
+          
+          const regex = new RegExp(`(${this.escapeRegex(this.currentSearch)})`, 'gi');
+          return text.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        escapeRegex(string) {
+          return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        startEdit(id) {
+          const todo = this.todos.find(t => t.id === id);
+          if (todo) {
+            this.editingId = id;
+            this.editInput.value = todo.text;
+            this.editModal.show();
+          }
+        }
+
+        saveEdit() {
+          const newText = this.editInput.value.trim();
+          
+          if (!newText) {
+            this.showEditError('Todo tidak boleh kosong!');
+            return;
+          }
+          
+          if (this.isDuplicate(newText, this.editingId)) {
+            this.showEditError('Todo dengan teks ini sudah ada!');
+            return;
+          }
+          
+          this.updateTodo(this.editingId, newText);
+          this.editModal.hide();
+          this.editingId = null;
+          this.clearEditError();
+        }
+
+        cancelEdit() {
+          this.editingId = null;
+          this.addBtn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Tambah';
+          this.cancelBtn.classList.add('d-none');
+          this.clearError();
+        }
+
+        showEditError(message) {
+          this.editInput.classList.add('is-invalid');
+          this.editErrorMessage.textContent = message;
+        }
+
+        clearEditError() {
+          this.editInput.classList.remove('is-invalid');
+          this.editErrorMessage.textContent = '';
+        }
+
+        updateStats() {
+          const total = this.todos.length;
+          const completed = this.todos.filter(t => t.completed).length;
+          const pending = total - completed;
+          
+          document.getElementById('totalCount').textContent = total;
+          document.getElementById('completedCount').textContent = completed;
+          document.getElementById('pendingCount').textContent = pending;
+          
+          // Update filter badges
+          const filteredAll = this.todos.length;
+          const filteredCompleted = this.todos.filter(t => t.completed).length;
+          const filteredPending = this.todos.filter(t => !t.completed).length;
+          
+          document.getElementById('allBadge').textContent = filteredAll;
+          document.getElementById('completedBadge').textContent = filteredCompleted;
+          document.getElementById('pendingBadge').textContent = filteredPending;
+        }
+
+        render() {
+          const filteredTodos = this.getFilteredTodos();
+          
+          this.updateStats();
+          
+          if (filteredTodos.length === 0) {
+            this.todoList.innerHTML = '';
+            this.emptyState.classList.remove('d-none');
+            return;
+          }
+          
+          this.emptyState.classList.add('d-none');
+          
+          this.todoList.innerHTML = filteredTodos.map(todo => `
+            <li class="list-group-item todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
+              <div class="d-flex align-items-center">
+                <div class="drag-handle me-3">
+                  <i class="bi bi-grip-vertical"></i>
+                </div>
+                <div class="form-check me-3">
+                  <input 
+                    class="form-check-input" 
+                    type="checkbox" 
+                    ${todo.completed ? 'checked' : ''}
+                    onchange="todoApp.toggleTodo('${todo.id}')"
+                  >
+                </div>
+                <div class="flex-grow-1 todo-text">
+                  ${this.highlightSearchText(todo.text)}
+                </div>
+                <div class="btn-group">
+                  <button 
+                    class="btn btn-sm btn-outline-primary"
+                    onclick="todoApp.startEdit('${todo.id}')"
+                    title="Edit todo"
+                  >
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button 
+                    class="btn btn-sm btn-outline-danger"
+                    onclick="todoApp.deleteTodo('${todo.id}')"
+                    title="Hapus todo"
+                  >
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </li>
+          `).join('');
+        }
+      }
+
+      // Initialize the app
+      const todoApp = new TodoApp();
+    </script>
+  </body>
+</html>
