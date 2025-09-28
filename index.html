@@ -119,19 +119,6 @@
       <div class="container">
         <div class="row justify-content-center">
           <div class="col-lg-8 col-md-10">
-            <!-- Navigation Tabs -->
-            <ul class="nav nav-tabs mb-4">
-              <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="index.html">Todo List</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="magic-number.html">Magic Number</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="password-checker.html">Password Checker</a>
-              </li>
-            </ul>
-            
             <div class="card todo-card">
               <div class="card-body p-4">
                 <!-- Header with Stats -->
@@ -384,11 +371,18 @@
           }
           
           if (this.editingId) {
+            // When editing, check for duplicates excluding current todo
+            if (this.isDuplicate(text, this.editingId)) {
+              this.showError('Todo dengan nama yang sama sudah ada!');
+              return;
+            }
             this.updateTodo(this.editingId, text);
             this.cancelEdit();
           } else {
+            // When adding new todo, check for duplicates
             if (this.isDuplicate(text)) {
-              this.showError('Todo dengan teks ini sudah ada!');
+              this.showError('⚠️ Todo dengan nama yang sama sudah ada! Silakan gunakan nama yang berbeda.');
+              this.highlightDuplicateTodo(text);
               return;
             }
             this.addTodo(text);
@@ -438,19 +432,68 @@
 
         isDuplicate(text, excludeId = null) {
           return this.todos.some(todo => 
-            todo.text.toLowerCase() === text.toLowerCase() && 
+            todo.text.toLowerCase().trim() === text.toLowerCase().trim() && 
             todo.id !== excludeId
           );
+        }
+
+        highlightDuplicateTodo(text) {
+          // Find and temporarily highlight the duplicate todo
+          const duplicateTodo = this.todos.find(todo => 
+            todo.text.toLowerCase().trim() === text.toLowerCase().trim()
+          );
+          
+          if (duplicateTodo) {
+            // Temporarily clear filters to show the duplicate todo
+            const originalFilter = this.currentFilter;
+            const originalSearch = this.currentSearch;
+            
+            this.currentFilter = 'all';
+            this.currentSearch = '';
+            this.render();
+            
+            // Find the duplicate todo element and highlight it
+            setTimeout(() => {
+              const todoElement = document.querySelector(`[data-id="${duplicateTodo.id}"]`);
+              if (todoElement) {
+                todoElement.style.backgroundColor = '#ffeb3b';
+                todoElement.style.transition = 'background-color 0.3s ease';
+                todoElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Remove highlight after 3 seconds
+                setTimeout(() => {
+                  todoElement.style.backgroundColor = '';
+                  // Restore original filters
+                  this.currentFilter = originalFilter;
+                  this.currentSearch = originalSearch;
+                  this.searchInput.value = originalSearch;
+                  this.render();
+                  
+                  // Update active filter button
+                  this.filterBtns.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.filter === originalFilter);
+                  });
+                }, 3000);
+              }
+            }, 100);
+          }
         }
 
         showError(message) {
           this.todoInput.classList.add('is-invalid');
           this.errorMessage.textContent = message;
+          this.errorMessage.style.display = 'block';
+          
+          // Auto-hide error after 5 seconds
+          setTimeout(() => {
+            this.clearError();
+          }, 5000);
         }
 
         clearError() {
           this.todoInput.classList.remove('is-invalid');
           this.errorMessage.textContent = '';
+          this.errorMessage.style.display = 'none';
         }
 
         handleSearch(e) {
@@ -517,7 +560,7 @@
           }
           
           if (this.isDuplicate(newText, this.editingId)) {
-            this.showEditError('Todo dengan teks ini sudah ada!');
+            this.showEditError('⚠️ Todo dengan nama yang sama sudah ada! Silakan gunakan nama yang berbeda.');
             return;
           }
           
@@ -537,11 +580,18 @@
         showEditError(message) {
           this.editInput.classList.add('is-invalid');
           this.editErrorMessage.textContent = message;
+          this.editErrorMessage.style.display = 'block';
+          
+          // Auto-hide error after 5 seconds
+          setTimeout(() => {
+            this.clearEditError();
+          }, 5000);
         }
 
         clearEditError() {
           this.editInput.classList.remove('is-invalid');
           this.editErrorMessage.textContent = '';
+          this.editErrorMessage.style.display = 'none';
         }
 
         updateStats() {
